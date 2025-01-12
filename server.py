@@ -1,6 +1,17 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from groq import Groq  # Import the Groq library
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Fetch the API key from the environment
+API_KEY = os.getenv('API_KEY')
+
+if not API_KEY:
+    raise Exception("API_KEY is not set in the environment variables")
 
 app = Flask(__name__)
 CORS(app)  # Enable cross-origin requests (needed for Flutter app)
@@ -9,7 +20,6 @@ CORS(app)  # Enable cross-origin requests (needed for Flutter app)
 user_data = {}
 
 # Initialize Groq client with API key
-API_KEY = "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"
 client = Groq(api_key=API_KEY)
 
 # Endpoint to save user profile
