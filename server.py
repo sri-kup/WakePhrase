@@ -133,18 +133,38 @@ def login():
 def save_profile():
     data = request.json
     user_id = data.get("user_id")
-    if not user_id or not data.get("name") or not data.get("goals") or not data.get("fears"):
+    name = data.get("name")
+    goals = data.get("goals")
+    fears = data.get("fears")
+
+    if not user_id or not name or not goals or not fears:
         return jsonify({"error": "User ID, name, goals, and fears are required"}), 400
 
-    conn = get_db_connection()
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO user_profile (user_id, name, goals, fears)
-        VALUES (?, ?, ?, ?)
-    ''', (user_id, data["name"], data["goals"], data["fears"]))
+
+    # Check if a profile already exists for this user
+    cursor.execute("SELECT * FROM user_profile WHERE user_id = ?", (user_id,))
+    existing_profile = cursor.fetchone()
+
+    if existing_profile:
+        # Update the existing profile
+        cursor.execute("""
+            UPDATE user_profile
+            SET name = ?, goals = ?, fears = ?
+            WHERE user_id = ?
+        """, (name, goals, fears, user_id))
+    else:
+        # Insert a new profile
+        cursor.execute("""
+            INSERT INTO user_profile (user_id, name, goals, fears)
+            VALUES (?, ?, ?, ?)
+        """, (user_id, name, goals, fears))
+
     conn.commit()
     conn.close()
     return jsonify({"message": "Profile saved successfully!"}), 200
+
 
 # Generate catchphrase
 @app.route('/phrase', methods=['GET'])
@@ -202,4 +222,5 @@ def generate_phrase():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5001, debug=True)
+
