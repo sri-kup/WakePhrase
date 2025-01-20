@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
+import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
+import '../alarm_manager.dart';
 
 class AlarmsScreen extends StatefulWidget {
   const AlarmsScreen({super.key});
@@ -9,16 +12,54 @@ class AlarmsScreen extends StatefulWidget {
 }
 
 class _AlarmsScreenState extends State<AlarmsScreen> {
-  final List<TimeOfDay> _alarms = []; // List to store alarms
+  final List<Map<String, dynamic>> _alarms = []; // List to store alarms
   final TextEditingController _timeController = TextEditingController(); // For typed input
 
-  // Function to add alarm to the list
-  void _addAlarm(TimeOfDay time) {
+  @override
+  void initState() {
+    super.initState();
+    _loadAlarms(); // Load stored alarms on screen load
+  }
+
+  // Load alarms from SharedPreferences
+  Future<void> _loadAlarms() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> storedAlarms = prefs.getStringList(AlarmManager.alarmsKey) ?? [];
     setState(() {
-      _alarms.add(time);
-      _alarms.sort((a, b) => a.hour == b.hour
-          ? a.minute.compareTo(b.minute)
-          : a.hour.compareTo(b.hour)); // Sort alarms in ascending order
+      _alarms.addAll(storedAlarms.map((alarm) {
+        final parts = alarm.split(',');
+        return {
+          "id": int.parse(parts[0]),
+          "time": DateTime.parse(parts[1]),
+          "action": parts[2],
+          "userId": parts[3],
+        };
+      }).toList());
+      _alarms.sort((a, b) => a["time"].compareTo(b["time"])); // Sort alarms
+    });
+  }
+
+  // Add an alarm to the list and schedule it
+  void _addAlarm(DateTime time) async {
+    int alarmId = _alarms.length + 1; // Unique alarm ID
+    String userId = "123e4567-e89b-12d3-a456-426614174000"; // Placeholder user ID
+    String action = "dismiss"; // Default action
+
+    await AlarmManager.scheduleAlarm(
+      id: alarmId,
+      time: time,
+      userId: userId,
+      action: action,
+    );
+
+    setState(() {
+      _alarms.add({
+        "id": alarmId,
+        "time": time,
+        "action": action,
+        "userId": userId,
+      });
+      _alarms.sort((a, b) => a["time"].compareTo(b["time"])); // Sort alarms
     });
   }
 
@@ -29,7 +70,18 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
       initialTime: TimeOfDay.now(),
     );
     if (selectedTime != null) {
-      _addAlarm(selectedTime);
+      final DateTime now = DateTime.now();
+      DateTime alarmTime = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        selectedTime.hour,
+        selectedTime.minute,
+      );
+      if (alarmTime.isBefore(now)) {
+        alarmTime = alarmTime.add(const Duration(days: 1)); // Next day
+      }
+      _addAlarm(alarmTime);
     }
   }
 
@@ -54,7 +106,12 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
         throw FormatException();
       }
 
-      _addAlarm(TimeOfDay(hour: hour, minute: minute));
+      final DateTime now = DateTime.now();
+      DateTime alarmTime = DateTime(now.year, now.month, now.day, hour, minute);
+      if (alarmTime.isBefore(now)) {
+        alarmTime = alarmTime.add(const Duration(days: 1)); // Next day
+      }
+      _addAlarm(alarmTime);
       _timeController.clear(); // Clear the input field
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -63,11 +120,17 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
     }
   }
 
-  // Convert TimeOfDay to a readable string
-  String _formatTime(TimeOfDay time) {
-    final String hour = time.hour.toString().padLeft(2, '0');
-    final String minute = time.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
+  // Convert DateTime to a readable string
+  String _formatTime(DateTime time) {
+    return DateFormat.jm().format(time); // Format as 12-hour time
+  }
+
+  // Delete alarm
+  void _deleteAlarm(int id) async {
+    await AlarmManager.cancelAlarm(id);
+    setState(() {
+      _alarms.removeWhere((alarm) => alarm["id"] == id);
+    });
   }
 
   @override
@@ -109,19 +172,15 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
             child: ListView.builder(
               itemCount: _alarms.length,
               itemBuilder: (context, index) {
-                final TimeOfDay alarm = _alarms[index];
+                final alarm = _alarms[index];
                 return ListTile(
                   title: Text(
-                    _formatTime(alarm),
+                    _formatTime(alarm["time"]),
                     style: const TextStyle(fontSize: 16),
                   ),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete),
-                    onPressed: () {
-                      setState(() {
-                        _alarms.removeAt(index);
-                      });
-                    },
+                    onPressed: () => _deleteAlarm(alarm["id"]),
                   ),
                 );
               },

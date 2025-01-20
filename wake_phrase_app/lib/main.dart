@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'screens/alarms_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/alarm_trigger_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // Ensure widgets are initialized
+  // await AndroidAlarmManager.initialize(); // Initialize alarm manager
   runApp(const WakePhraseApp());
 }
 
@@ -15,6 +19,10 @@ class WakePhraseApp extends StatelessWidget {
       title: 'WakePhrase',
       theme: ThemeData(primarySwatch: Colors.blue),
       home: const MainScreen(),
+      routes: {
+        // Define a route for AlarmTriggerScreen
+        '/alarm-trigger': (context) => const AlarmTriggerScreen(),
+      },
     );
   }
 }
@@ -29,7 +37,7 @@ class MainScreen extends StatefulWidget {
 class MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
-  // Updated screens with functional AlarmsScreen and ProfileScreen
+  // Screens for navigation
   final List<Widget> _screens = [
     const AlarmsScreen(),
     const ProfileScreen(),
