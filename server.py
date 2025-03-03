@@ -342,13 +342,15 @@ def generate_phrase():
         # Adjust the prompt based on the action
         if action == "dismiss":
             prompt = f"""
-            Based on the user's goals and fears, generate a single concise, powerful motivational phrase that affirms their desire to achieve their goals. Avoid being patronising or overly formal.
+            Generate a short, powerful first-person affirmation that reinforces my determination to achieve my goals. The phrase should be strong, motivating, and confident—something I can repeat to myself as a personal mantra. Avoid being overly formal or generic.
             Goals: {goals}
             Fears: {fears}
             """
+
+
         elif action == "snooze":
             prompt = f"""
-            Generate a concise, impactful phrase that reflects the user's fears and challenges their goals in a direct, aggressive tone. Avoid excessive explanation or formality.
+            Generate a short, aggressive first-person phrase that brutally highlights my fears and makes me feel the consequences of inaction. The phrase should sound like a harsh reality check, something that hurts to read—no sugarcoating. Avoid explanations, just make it hit hard.
             Goals: {goals}
             Fears: {fears}
             """
